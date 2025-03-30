@@ -1,0 +1,130 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.5
+    hooks:
+      - id: ruff
+        language_version: python3
+        args: [--fix, --exit-non-zero-on-fix, --show-fixes]
+      - id: ruff-format
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        additional_dependencies:
+          - tomli
+        exclude: package-lock.json|_vendor/.*|docs/styles/.*
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pydantic>=1.10.0,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0
+          - types-cachetools==5.3.0.5
+          - types-pyyaml==6.0.12.9
+        files: |
+          (?x)^(
+            src/prefect/server/models/.*|
+            src/prefect/concurrency/.*|
+            src/prefect/events/.*|
+            src/prefect/input/.*
+          )$
+  - repo: local
+    hooks:
+      # https://docs.astral.sh/uv/concepts/projects/sync/#checking-if-the-lockfile-is-up-to-date
+      - id: check-uv-lock
+        name: Check uv.lock
+        language: system
+        entry: uv lock --check
+        pass_filenames: false
+        files: |
+          (?x)^(
+            uv.lock
+          )$
+
+  - repo: local
+    hooks:
+      - id: generate-mintlify-openapi-docs
+        name: Generating OpenAPI docs for Mintlify
+        language: system
+        entry: uv run --with 'pydantic>=2.9.0' ./scripts/generate_mintlify_openapi_docs.py
+        pass_filenames: false
+        files: |
+          (?x)^(
+              .pre-commit-config.yaml|
+              src/prefect/server/api/.*|
+              src/prefect/server/schemas/.*|
+              src/prefect/server/events/.*|
+              scripts/generate_mintlify_openapi_docs.py
+          )$
+      - id: generate-settings-schema
+        name: Generating Settings Schema
+        language: system
+        entry: uv run --with 'pydantic>=2.9.0' ./scripts/generate_settings_schema.py
+        pass_filenames: false
+        files: |
+          (?x)^(
+              .pre-commit-config.yaml|
+              src/prefect/settings/models/.*|
+              scripts/generate_settings_schema.py
+          )$
+      - id: generate-settings-ref
+        name: Generating Settings Reference
+        language: system
+        entry: uv run --with 'pydantic>=2.9.0' ./scripts/generate_settings_ref.py
+        pass_filenames: false
+        files: |
+          (?x)^(
+              .pre-commit-config.yaml|
+              src/prefect/settings/models/.*|
+              scripts/generate_settings_ref.py
+          )$
+      - id: lint-ui-v2
+        name: Lint UI v2
+        language: system
+        entry: sh
+        args:
+          [
+            "-c",
+            ". $NVM_DIR/nvm.sh || true && cd ui-v2 && nvm use || true && npm i --no-upgrade --silent --no-progress && npm run lint-staged",
+          ]
+        files: |
+          (?x)^(
+              .pre-commit-config.yaml|
+              ui-v2/.*
+          )$
+        pass_filenames: false
+      - id: format-ui-v2
+        name: Format UI v2
+        language: system
+        entry: sh
+        args:
+          [
+            "-c",
+            ". $NVM_DIR/nvm.sh || true && cd ui-v2 && nvm use || true && npm i --no-upgrade --silent --no-progress && npm run format",
+          ]
+        files: |
+          (?x)^(
+              .pre-commit-config.yaml|
+              ui-v2/.*
+          )$
+        pass_filenames: false
+      - id: service-sync-ui-v2-openapi
+        name: Sync UI v2 OpenAPI
+        language: system
+        entry: sh
+        args:
+          [
+            "-c",
+            ". $NVM_DIR/nvm.sh || true && cd ui-v2 && nvm use || true && npm i --no-upgrade --silent --no-progress && npm run service-sync",
+          ]
+        files: |
+          (?x)^(
+              .pre-commit-config.yaml|
+              .pre-commit-config.yaml|
+              src/prefect/server/api/.*|
+              src/prefect/server/schemas/.*|
+              src/prefect/server/events/.*|
+              src/prefect/server/utilities/schemas/.*|
+              ui-v2/package.json
+          )$
+        pass_filenames: false
