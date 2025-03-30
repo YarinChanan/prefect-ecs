@@ -1,0 +1,65 @@
+name: Terraform CI/CD
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - pp
+      - "**" 
+    paths:
+      - "terraform/**"
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "terraform/**"
+
+jobs:
+  terraform:
+    name: Terraform Code Validation and Deployment
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      #Installs Terraform on the runner to allow for the execution of Terraform commands.
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+
+      #This step initializes Terraform, configuring the backend and initializing providers
+      - name: Terraform init
+        run: terraform init -backend-config="region=eu-central-1"
+        working-directory: terraform
+
+      #Checks Terraform configuration files for syntax - checks errors
+      - name: Terraform validate
+        run: terraform validate
+        working-directory: terraform
+
+      #Checks for best practices and potential issues that might not cause errors
+      - name: Terraform Lint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      - name: Terraform plan (Pull Request)
+        if: github.event_name == 'pull_request'
+        run: terraform plan
+        working-directory: terraform
+
+      - name: Terraform apply (Push to main)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve
+        working-directory: terraform
+
+      
